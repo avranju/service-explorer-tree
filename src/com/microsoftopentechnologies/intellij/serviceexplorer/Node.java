@@ -28,7 +28,8 @@ public class Node {
     private Node parent;
     private List<Node> childNodes = new ArrayList<Node>();
     private String iconPath;
-    private Object data;
+    private Object userData;
+    private Object viewData;
     private NodeAction clickAction = new NodeAction(this, CLICK_ACTION);
     private List<NodeAction> nodeActions = new ArrayList<NodeAction>();
 
@@ -38,12 +39,12 @@ public class Node {
         this(id, name, null, null, null);
     }
 
-    public Node(String id, String name, Node parent, String iconPath, Object data) {
+    public Node(String id, String name, Node parent, String iconPath, Object userData) {
         this.id = id;
         this.name = name;
         this.parent = parent;
         this.iconPath = iconPath;
-        this.data = data;
+        this.userData = userData;
     }
 
     public String getId() {
@@ -64,6 +65,14 @@ public class Node {
         return parent;
     }
 
+    public List<Node> getChildNodes() {
+        return childNodes;
+    }
+
+    public boolean hasChildNodes() {
+        return !childNodes.isEmpty();
+    }
+
     public String getIconPath() {
         return iconPath;
     }
@@ -74,12 +83,12 @@ public class Node {
         propertyChangeSupport.firePropertyChange("iconPath", oldValue, iconPath);
     }
 
-    public Object getData() {
-        return data;
+    public Object getUserData() {
+        return userData;
     }
 
-    public void setData(Object data) {
-        this.data = data;
+    public void setUserData(Object userData) {
+        this.userData = userData;
     }
 
     public void addChildNode(Node child) {
@@ -88,6 +97,14 @@ public class Node {
 
     public void addAction(NodeAction action) {
         nodeActions.add(action);
+    }
+
+    public List<NodeAction> getNodeActions() {
+        return nodeActions;
+    }
+
+    public boolean hasNodeActions() {
+        return !nodeActions.isEmpty();
     }
 
     public void addActions(Iterable<NodeAction> actions) {
@@ -110,5 +127,13 @@ public class Node {
 
     public void removePropertyChangeListener(PropertyChangeListener listener) {
         propertyChangeSupport.removePropertyChangeListener(listener);
+    }
+
+    public Object getViewData() {
+        return viewData;
+    }
+
+    public void setViewData(Object viewData) {
+        this.viewData = viewData;
     }
 }

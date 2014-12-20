@@ -1,14 +1,154 @@
 package com.microsoftopentechnologies.intellij.components;
 
-import javax.swing.*;
+import com.microsoftopentechnologies.intellij.serviceexplorer.AzureServiceModule;
+import com.microsoftopentechnologies.intellij.serviceexplorer.Node;
+import com.microsoftopentechnologies.intellij.serviceexplorer.NodeAction;
 
-public class ServerExplorerToolWindowFactory {
+import javax.swing.*;
+import javax.swing.tree.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.net.URL;
+
+public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
     private JTree tree;
+    private AzureServiceModule azureServiceModule = new AzureServiceModule();
+    private DefaultTreeModel treeModel;
 
     public void createToolWindowContent(JFrame frame) {
-        tree = new JTree();
+        // initialize with all the service modules
+        treeModel = new DefaultTreeModel(initRoot());
+
+        // initialize tree
+        tree = new JTree(treeModel);
         tree.setRootVisible(false);
+        tree.setCellRenderer(new NodeTreeCellRenderer());
+
+        // add a click handler for the tree
+        tree.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                treeMousePressed(e);
+            }
+        });
 
         frame.add(new JScrollPane(tree));
+    }
+
+    private DefaultMutableTreeNode initRoot() {
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode();
+
+        // add the azure service root service module
+        root.add(createTreeNode(azureServiceModule, root));
+
+        return root;
+    }
+
+    private void treeMousePressed(MouseEvent e) {
+        // get the tree node associated with this mouse click
+        TreePath treePath = tree.getPathForLocation(e.getX(), e.getY());
+        if(treePath == null)
+            return;
+
+        DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)treePath.getLastPathComponent();
+        Node node = (Node)treeNode.getUserObject();
+
+        // delegate click to the node's click action if this is a left button click
+        if(SwingUtilities.isLeftMouseButton(e)) {
+            node.getClickAction().fireNodeActionEvent();
+        }
+        // for right click show the context menu populated with all the
+        // actions from the node
+        else if(SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger()) {
+            if(node.hasNodeActions()) {
+                JPopupMenu menu = createPopupMenuForNode(node);
+                menu.show(e.getComponent(), e.getX(), e.getY());
+            }
+        }
+    }
+
+    private JPopupMenu createPopupMenuForNode(Node node) {
+        JPopupMenu menu = new JPopupMenu();
+
+        for(final NodeAction nodeAction : node.getNodeActions()) {
+            JMenuItem menuItem = new JMenuItem(nodeAction.getName());
+            menuItem.setIconTextGap(16);
+
+            // delegate the menu item click to the node action's listeners
+            menuItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    nodeAction.fireNodeActionEvent();
+                }
+            });
+
+            menu.add(menuItem);
+        }
+
+        return menu;
+    }
+
+    private DefaultMutableTreeNode createTreeNode(Node node, TreeNode parent) {
+        DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode(node, true);
+
+        // associate the DefaultMutableTreeNode with the Node via it's "viewData"
+        // property; this allows us to quickly retrieve the DefaultMutableTreeNode
+        // object associated with a Node
+        node.setViewData(treeNode);
+
+        // listen for property change events on the node
+        node.addPropertyChangeListener(this);
+
+        // create child tree nodes for each child node
+        if(node.hasChildNodes()) {
+            for (Node childNode : node.getChildNodes()) {
+                treeNode.add(createTreeNode(childNode, treeNode));
+            }
+        }
+
+        return treeNode;
+    }
+
+    @Override
+    public void propertyChange(PropertyChangeEvent evt) {
+        // this event is fired whenever a property on a node in the
+        // model changes; we respond by triggering a node change
+        // event in the tree's model
+        Node node = (Node)evt.getSource();
+        treeModel.nodeChanged((TreeNode) node.getViewData());
+    }
+
+    // TODO: Change this to a NodeRenderer when moving to the IntelliJ plugin
+    private class NodeTreeCellRenderer extends DefaultTreeCellRenderer {
+        @Override
+        public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
+            super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+
+            // if the node has an icon set then we use that
+            DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)value;
+            Node node = (Node)treeNode.getUserObject();
+            String iconPath = node.getIconPath();
+            if(iconPath != null && !iconPath.isEmpty()) {
+                setIcon(loadIcon(iconPath));
+            }
+
+            // setup a tooltip
+            setToolTipText(node.getName());
+
+            // setup label text (DefaultTreeCellRenderer inherits from JLabel)
+            setText(node.getName());
+
+            return this;
+        }
+
+        private ImageIcon loadIcon(String iconPath) {
+            URL url = NodeTreeCellRenderer.class.getResource("/com/microsoftopentechnologies/intellij/icons/" + iconPath);
+            return new ImageIcon(url);
+        }
     }
 }

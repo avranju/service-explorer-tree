@@ -41,6 +41,15 @@ public class NodeAction {
         return listeners;
     }
 
+    public void fireNodeActionEvent() {
+        if(!listeners.isEmpty()) {
+            NodeActionEvent event = new NodeActionEvent(this);
+            for(NodeActionListener listener : listeners) {
+                listener.actionPerformed(event);
+            }
+        }
+    }
+
     public Node getNode() {
         return node;
     }

@@ -1,5 +1,8 @@
 package com.microsoftopentechnologies.intellij.components;
 
+import com.microsoftopentechnologies.intellij.helper.collections.ListChangeListener;
+import com.microsoftopentechnologies.intellij.helper.collections.ListChangedEvent;
+import com.microsoftopentechnologies.intellij.helper.collections.ObservableList;
 import com.microsoftopentechnologies.intellij.serviceexplorer.AzureServiceModule;
 import com.microsoftopentechnologies.intellij.serviceexplorer.Node;
 import com.microsoftopentechnologies.intellij.serviceexplorer.NodeAction;
@@ -14,6 +17,9 @@ import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.net.URL;
+import java.util.Collection;
+
+import static com.microsoftopentechnologies.intellij.helper.collections.ListChangedAction.*;
 
 public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
     private JTree tree;
@@ -43,8 +49,11 @@ public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
     private DefaultMutableTreeNode initRoot() {
         DefaultMutableTreeNode root = new DefaultMutableTreeNode();
 
+        // kick-off asynchronous load of child nodes on all the modules
+        azureServiceModule.load();
+
         // add the azure service root service module
-        root.add(createTreeNode(azureServiceModule, root));
+        root.add(createTreeNode(azureServiceModule, null));
 
         return root;
     }
@@ -93,7 +102,7 @@ public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
         return menu;
     }
 
-    private DefaultMutableTreeNode createTreeNode(Node node, TreeNode parent) {
+    private DefaultMutableTreeNode createTreeNode(Node node, MutableTreeNode parent) {
         DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode(node, true);
 
         // associate the DefaultMutableTreeNode with the Node via it's "viewData"
@@ -103,6 +112,10 @@ public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
 
         // listen for property change events on the node
         node.addPropertyChangeListener(this);
+
+        // listen for structure changes on the node, i.e. when child nodes are
+        // added or removed
+        node.getChildNodes().addChangeListener(new NodeListChangeListener(treeNode));
 
         // create child tree nodes for each child node
         if(node.hasChildNodes()) {
@@ -114,6 +127,20 @@ public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
         return treeNode;
     }
 
+    private void removeEventHandlers(Node node) {
+        node.removePropertyChangeListener(this);
+
+        ObservableList<Node> childNodes = node.getChildNodes();
+        childNodes.removeAllChangeListeners();
+
+        if(node.hasChildNodes()) {
+            // this remove call should cause the NodeListChangeListener object
+            // registered on it's child nodes to fire which should recursively
+            // clean up event handlers on it's children
+            node.removeAllChildNodes();
+        }
+    }
+
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
         // this event is fired whenever a property on a node in the
@@ -121,6 +148,33 @@ public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
         // event in the tree's model
         Node node = (Node)evt.getSource();
         treeModel.nodeChanged((TreeNode) node.getViewData());
+    }
+
+    private class NodeListChangeListener implements ListChangeListener {
+        private DefaultMutableTreeNode treeNode;
+
+        public NodeListChangeListener(DefaultMutableTreeNode treeNode) {
+            this.treeNode = treeNode;
+        }
+
+        @Override
+        public void listChanged(ListChangedEvent e) {
+            switch (e.getAction()) {
+                case add:
+                    // create child tree nodes for the new nodes
+                    for(Node childNode : (Collection<Node>)e.getNewItems()) {
+                        treeNode.add(createTreeNode(childNode, treeNode));
+                    }
+                    break;
+                case remove:
+                    // unregister all event handlers recursively and remove
+                    // child nodes from the tree
+                    for(Node childNode : (Collection<Node>)e.getOldItems()) {
+                        removeEventHandlers(childNode);
+                    }
+                    break;
+            }
+        }
     }
 
     // TODO: Change this to a NodeRenderer when moving to the IntelliJ plugin

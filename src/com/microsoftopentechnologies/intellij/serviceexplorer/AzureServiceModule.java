@@ -18,7 +18,13 @@ package com.microsoftopentechnologies.intellij.serviceexplorer;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
+import com.microsoftopentechnologies.intellij.serviceexplorer.mobileservice.MobileServiceModule;
+import com.microsoftopentechnologies.intellij.serviceexplorer.vm.VMServiceModule;
 
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,10 +38,45 @@ public class AzureServiceModule extends ServiceModule {
 
     public AzureServiceModule(Node parent, String iconPath, Object data) {
         super(AZURE_SERVICE_MODULE_ID, "Azure", parent, iconPath, data);
+
+        // add the node actions
+        NodeAction refresh = new NodeAction(this, "Refresh");
+        refresh.addListener(new NodeActionListener() {
+            @Override
+            public void actionPerformed(NodeActionEvent e) {
+                refreshServices();
+            }
+        });
+    }
+
+    private void refreshServices() {
+        // remove all child nodes
+        removeAllChildNodes();
+
+        // add the mobile service module
+        MobileServiceModule mobileServiceModule = new MobileServiceModule(this);
+        addChildNode(mobileServiceModule);
+        mobileServiceModule.load();
+
+        // add the VM service module
+        VMServiceModule vmServiceModule = new VMServiceModule(this);
+        addChildNode(vmServiceModule);
+        vmServiceModule.load();
     }
 
     @Override
     public ListenableFuture<List<Node>> load() {
-        return null;
+        final SettableFuture<List<Node>> future = SettableFuture.create();
+        new Timer(2000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                refreshServices();
+                future.set(getChildNodes());
+                Timer timer = (Timer)e.getSource();
+                timer.stop();
+            }
+        }).start();
+
+        return future;
     }
 }

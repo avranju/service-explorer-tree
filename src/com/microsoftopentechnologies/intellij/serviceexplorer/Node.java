@@ -16,6 +16,8 @@
 
 package com.microsoftopentechnologies.intellij.serviceexplorer;
 
+import com.microsoftopentechnologies.intellij.helper.collections.ObservableList;
+
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.ArrayList;
@@ -26,7 +28,7 @@ public class Node {
     private String id;
     private String name;
     private Node parent;
-    private List<Node> childNodes = new ArrayList<Node>();
+    private ObservableList<Node> childNodes = new ObservableList<Node>();
     private String iconPath;
     private Object userData;
     private Object viewData;
@@ -65,12 +67,20 @@ public class Node {
         return parent;
     }
 
-    public List<Node> getChildNodes() {
+    public ObservableList<Node> getChildNodes() {
         return childNodes;
     }
 
     public boolean hasChildNodes() {
         return !childNodes.isEmpty();
+    }
+
+    public void removeAllChildNodes() {
+        while(!childNodes.isEmpty()) {
+            // this remove call should cause the NodeListChangeListener object
+            // registered on it's child nodes to fire
+            childNodes.remove(0);
+        }
     }
 
     public String getIconPath() {

@@ -25,9 +25,15 @@ import java.util.List;
 public class MobileServiceModule extends ServiceModule {
     private static final String MOBILE_SERVICE_MODULE_ID = MobileServiceModule.class.getName();
     private static final String ICON_PATH = "service.png";
+    private static final String BASE_MODULE_NAME = "Mobile Services";
 
     public MobileServiceModule(Node parent) {
-        super(MOBILE_SERVICE_MODULE_ID, "Mobile Services", parent, ICON_PATH, null);
+        super(MOBILE_SERVICE_MODULE_ID, BASE_MODULE_NAME, parent, ICON_PATH, true, null);
+    }
+
+    @Override
+    protected void refreshItems() {
+        // TODO:
     }
 
     @Override

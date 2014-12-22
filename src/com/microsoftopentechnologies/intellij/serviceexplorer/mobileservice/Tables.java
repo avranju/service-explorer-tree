@@ -26,7 +26,12 @@ public class Tables extends ServiceModule {
     public static final String TABLES_MODULE_ID = Tables.class.getName();
 
     public Tables(Node parent) {
-        super(TABLES_MODULE_ID, "Tables", parent, null, null);
+        super(TABLES_MODULE_ID, "Tables", parent, null, true, null);
+    }
+
+    @Override
+    protected void refreshItems() {
+        // TODO:
     }
 
     @Override

@@ -1,4 +1,4 @@
-package com.microsoftopentechnologies.intellij.helper.collections;
+package com.microsoftopentechnologies.intellij.helpers.collections;
 
 import com.google.common.collect.ForwardingList;
 

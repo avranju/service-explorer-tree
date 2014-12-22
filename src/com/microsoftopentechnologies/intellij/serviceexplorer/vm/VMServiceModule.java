@@ -25,9 +25,15 @@ import java.util.List;
 public class VMServiceModule extends ServiceModule {
     private static final String VM_SERVICE_MODULE_ID = VMServiceModule.class.getName();
     private static final String ICON_PATH = "vm.png";
+    private static final String BASE_MODULE_NAME = "Virtual Machines";
 
     public VMServiceModule(Node parent) {
-        super(VM_SERVICE_MODULE_ID, "Virtual Machines", parent, ICON_PATH, null);
+        super(VM_SERVICE_MODULE_ID, BASE_MODULE_NAME, parent, ICON_PATH, true, null);
+    }
+
+    @Override
+    protected void refreshItems() {
+        // TODO:
     }
 
     @Override

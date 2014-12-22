@@ -25,9 +25,32 @@ public abstract class ServiceModule extends Node {
         super(id, name);
     }
 
-    public ServiceModule(String id, String name, Node parent, String iconPath, Object data) {
+    public ServiceModule(
+            String id,
+            String name,
+            Node parent,
+            String iconPath,
+            boolean hasRefresh,
+            Object data) {
         super(id, name, parent, iconPath, data);
+
+        // add the refresh node action
+        if(hasRefresh) {
+            NodeAction refresh = new NodeAction(this, "Refresh");
+            refresh.addListener(new NodeActionListener() {
+                @Override
+                public void actionPerformed(NodeActionEvent e) {
+                    refreshItems();
+                }
+            });
+            addAction(refresh);
+        }
     }
 
     public abstract ListenableFuture<List<Node>> load();
+
+    protected void refreshItems() {
+        // we expect this method to be overriden by sub-classes
+        throw new UnsupportedOperationException("ServiceModule.refreshItems() must be overridden by subclasses.");
+    }
 }

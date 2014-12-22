@@ -1,8 +1,8 @@
 package com.microsoftopentechnologies.intellij.components;
 
-import com.microsoftopentechnologies.intellij.helper.collections.ListChangeListener;
-import com.microsoftopentechnologies.intellij.helper.collections.ListChangedEvent;
-import com.microsoftopentechnologies.intellij.helper.collections.ObservableList;
+import com.microsoftopentechnologies.intellij.helpers.collections.ListChangeListener;
+import com.microsoftopentechnologies.intellij.helpers.collections.ListChangedEvent;
+import com.microsoftopentechnologies.intellij.helpers.collections.ObservableList;
 import com.microsoftopentechnologies.intellij.serviceexplorer.AzureServiceModule;
 import com.microsoftopentechnologies.intellij.serviceexplorer.Node;
 import com.microsoftopentechnologies.intellij.serviceexplorer.NodeAction;
@@ -19,8 +19,6 @@ import java.beans.PropertyChangeListener;
 import java.net.URL;
 import java.util.Collection;
 
-import static com.microsoftopentechnologies.intellij.helper.collections.ListChangedAction.*;
-
 public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
     private JTree tree;
     private AzureServiceModule azureServiceModule = new AzureServiceModule();
@@ -34,6 +32,7 @@ public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
         tree = new JTree(treeModel);
         tree.setRootVisible(false);
         tree.setCellRenderer(new NodeTreeCellRenderer());
+        tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 
         // add a click handler for the tree
         tree.addMouseListener(new MouseAdapter() {
@@ -49,11 +48,11 @@ public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
     private DefaultMutableTreeNode initRoot() {
         DefaultMutableTreeNode root = new DefaultMutableTreeNode();
 
-        // kick-off asynchronous load of child nodes on all the modules
-        azureServiceModule.load();
-
         // add the azure service root service module
         root.add(createTreeNode(azureServiceModule, null));
+
+        // kick-off asynchronous load of child nodes on all the modules
+        azureServiceModule.load();
 
         return root;
     }
@@ -75,6 +74,9 @@ public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
         // actions from the node
         else if(SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger()) {
             if(node.hasNodeActions()) {
+                // select the node which was right-clicked
+                tree.getSelectionModel().setSelectionPath(treePath);
+
                 JPopupMenu menu = createPopupMenuForNode(node);
                 menu.show(e.getComponent(), e.getX(), e.getY());
             }
@@ -147,7 +149,13 @@ public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
         // model changes; we respond by triggering a node change
         // event in the tree's model
         Node node = (Node)evt.getSource();
-        treeModel.nodeChanged((TreeNode) node.getViewData());
+
+        // the treeModel object can be null before it is initialized
+        // from createToolWindowContent; we ignore property change
+        // notifications till we have a valid model object
+        if(treeModel != null) {
+            treeModel.nodeChanged((TreeNode) node.getViewData());
+        }
     }
 
     private class NodeListChangeListener implements ListChangeListener {
@@ -186,6 +194,13 @@ public class ServerExplorerToolWindowFactory implements PropertyChangeListener {
             // if the node has an icon set then we use that
             DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode)value;
             Node node = (Node)treeNode.getUserObject();
+
+            // "node" can be null if it's the root node which we keep hidden to simulate
+            // a multi-root tree control
+            if(node == null) {
+                return this;
+            }
+
             String iconPath = node.getIconPath();
             if(iconPath != null && !iconPath.isEmpty()) {
                 setIcon(loadIcon(iconPath));

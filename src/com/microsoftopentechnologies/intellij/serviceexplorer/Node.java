@@ -16,7 +16,7 @@
 
 package com.microsoftopentechnologies.intellij.serviceexplorer;
 
-import com.microsoftopentechnologies.intellij.helper.collections.ObservableList;
+import com.microsoftopentechnologies.intellij.helpers.collections.ObservableList;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
